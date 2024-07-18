@@ -1,7 +1,7 @@
 
 # GoogleScholarSwift 
 
-[![Build Status](https://github.com/ezefranca/GoogleScholarFetcher/actions/workflows/workflow.yml/badge.svg)](https://github.com/ezefranca/GoogleScholarFetcher/actions/workflows/workflow.yml)
+[![Swift](https://github.com/ezefranca/GoogleScholarSwift/actions/workflows/swift.yml/badge.svg)](https://github.com/ezefranca/GoogleScholarSwift/actions/workflows/swift.yml)
 
 The `GoogleScholarSwift` package provides an easy-to-use interface for fetching publication data from Google Scholar. It allows users to retrieve detailed information about an author's publications, including titles, publication years, links, and citation counts. This package is designed for academics, researchers, and anyone interested in programmatically analyzing scholarly publication data.
 
