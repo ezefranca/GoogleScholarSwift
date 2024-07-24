@@ -1,6 +1,6 @@
 # GoogleScholarSwift 
 
-[![Build Status](https://github.com/ezefranca/GoogleScholarFetcher/actions/workflows/workflow.yml/badge.svg)](https://github.com/ezefranca/GoogleScholarFetcher/actions/workflows/workflow.yml)
+[![Swift](https://github.com/ezefranca/GoogleScholarSwift/actions/workflows/swift.yml/badge.svg)](https://github.com/ezefranca/GoogleScholarSwift/actions/workflows/swift.yml)
 
 The `GoogleScholarSwift` package provides an easy-to-use interface for fetching publication data from Google Scholar. It allows users to retrieve detailed information about an author's publications, including titles, publication years, links, and citation counts. This package is designed for academics, researchers, and anyone interested in programmatically analyzing scholarly publication data.
 
@@ -10,7 +10,7 @@ To integrate `GoogleScholarSwift` into your Xcode project using Swift Package Ma
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ezefranca/GoogleScholarFetcher.git", from: "1.0.0")
+    .package(url: "https://github.com/ezefranca/GoogleScholarSwift.git", from: "1.0.1")
 ]
 ```
 
@@ -159,7 +159,7 @@ fetcher.fetchAllPublications(authorID: "6nOPl94AAAAJ", sortBy: "pubdate") { publ
 
 ## Contributing
 
-We welcome contributions to `GoogleScholarFetcher`! If you have suggestions for improvements, please open an issue or a pull request.
+We welcome contributions to `GoogleScholarSwift`! If you have suggestions for improvements, please open an issue or a pull request.
 
 ## Similar projects
 
