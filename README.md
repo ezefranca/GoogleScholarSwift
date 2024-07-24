@@ -1,4 +1,3 @@
-
 # GoogleScholarSwift 
 
 [![Build Status](https://github.com/ezefranca/GoogleScholarFetcher/actions/workflows/workflow.yml/badge.svg)](https://github.com/ezefranca/GoogleScholarFetcher/actions/workflows/workflow.yml)
@@ -26,38 +25,34 @@ Then add `GoogleScholarSwift` as a dependency in your target:
 )
 ```
 
-## Usage
+## Methods
 
-### Using the CLI (Command Line Interface)
+### `fetchAllPublications`
 
-`GoogleScholarSwift` can be easily used via its command-line interface. Here are some examples:
-
-Fetch all publications for a given author ID:
-```bash
-swift run GoogleScholarSwiftCLI <author_id>
-```
-
-Fetch a specific number of publications for a given author ID:
-```bash
-swift run GoogleScholarSwiftCLI <author_id> --max <number_of_publications>
-```
-
-Sort results by pubdate/cited:
-```bash
-swift run GoogleScholarSwiftCLI <author_id> --sortby <pubdate/cited>
-```
-
-### Using as a Swift Package
-
-You can also use `GoogleScholarFetcher` directly in your Swift code. Here's how:
+Fetches all publications for a given author from Google Scholar.
 
 ```swift
-import GoogleScholarFetcher
+public func fetchAllPublications(
+    authorID: String,
+    maxPublications: Int? = nil,
+    sortBy: String = "cited",
+    completion: @escaping ([Publication]?, Error?) -> Void)
+```
 
+#### Parameters
+
+- `authorID`: The Google Scholar author ID.
+- `maxPublications`: The maximum number of publications to fetch. If `nil`, fetches all available publications.
+- `sortBy`: The sorting criterion for publications. Can be `.cited` or `.pubdate`. Default is `.cited`.
+- `completion`: A completion handler called with the fetched publications or an error.
+
+#### Example Usage
+
+```swift
 let fetcher = GoogleScholarFetcher()
 
 // Fetch all publications for a given author ID
-fetcher.fetchAllPublications(authorID: "<author_id>") { publications, error in
+fetcher.fetchAllPublications(authorID: "6nOPl94AAAAJ") { publications, error in
     if let error = error {
         print("Error fetching publications: \(error)")
     } else if let publications = publications {
@@ -66,7 +61,7 @@ fetcher.fetchAllPublications(authorID: "<author_id>") { publications, error in
 }
 
 // Fetch a specific number of publications for a given author ID
-fetcher.fetchAllPublications(authorID: "<author_id>", maxPublications: <number_of_publications>) { publications, error in
+fetcher.fetchAllPublications(authorID: "6nOPl94AAAAJ", maxPublications: 10) { publications, error in
     if let error = error {
         print("Error fetching publications: \(error)")
     } else if let publications = publications {
@@ -74,8 +69,8 @@ fetcher.fetchAllPublications(authorID: "<author_id>", maxPublications: <number_o
     }
 }
 
-// Fetch all publications for a given author ID and sort by pubdate/cited
-fetcher.fetchAllPublications(authorID: "<author_id>", sortBy: "<pubdate/cited>") { publications, error in
+// Fetch all publications for a given author ID and sort by pubdate
+fetcher.fetchAllPublications(authorID: "6nOPl94AAAAJ", sortBy: "pubdate") { publications, error in
     if let error = error {
         print("Error fetching publications: \(error)")
     } else if let publications = publications {
@@ -84,14 +79,93 @@ fetcher.fetchAllPublications(authorID: "<author_id>", sortBy: "<pubdate/cited>")
 }
 ```
 
+### `fetchArticleDetails`
+
+Fetches the detailed information for a specific article.
+
+```swift
+public func fetchArticleDetails(
+    articleDetails: ArticleDetails,
+    completion: @escaping (Article?, Error?) -> Void)
+```
+
+#### Parameters
+
+- `articleDetails`: An `ArticleDetails` object containing the link to the article.
+- `completion`: A completion handler called with the fetched article details or an error.
+
+#### Example Usage
+
+```swift
+let fetcher = GoogleScholarFetcher()
+
+let articleDetails = ArticleDetails(link: "https://scholar.google.com/citations?view_op=view_citation&hl=en&user=6nOPl94AAAAJ&citation_for_view=6nOPl94AAAAJ:UebtZRa9Y70C")
+fetcher.fetchArticleDetails(articleDetails: articleDetails) { article, error in
+    if let error = error {
+        print("Error fetching article details: \(error)")
+    } else if let article = article {
+        print(article)
+    }
+}
+```
+
+### Complete Example
+
+```swift
+import GoogleScholarFetcher
+
+let fetcher = GoogleScholarFetcher()
+
+// Fetch all publications for a given author ID
+fetcher.fetchAllPublications(authorID: "6nOPl94AAAAJ") { publications, error in
+    if let error = error {
+        print("Error fetching publications: \(error)")
+    } else if let publications = publications {
+        print(publications)
+        
+        // Assuming we want to fetch details of the first publication
+        if let firstPublication = publications.first {
+            let articleDetails = ArticleDetails(link: firstPublication.link)
+            fetcher.fetchArticleDetails(articleDetails: articleDetails) { article, error in
+                if let error = error {
+                    print("Error fetching article details: \(error)")
+                } else if let article = article {
+                    print(article)
+                }
+            }
+        }
+    }
+}
+
+// Fetch a specific number of publications for a given author ID
+fetcher.fetchAllPublications(authorID: "6nOPl94AAAAJ", maxPublications: 10) { publications, error in
+    if let error = error {
+        print("Error fetching publications: \(error)")
+    } else if let publications = publications {
+        print(publications)
+    }
+}
+
+// Fetch all publications for a given author ID and sort by pubdate
+fetcher.fetchAllPublications(authorID: "6nOPl94AAAAJ", sortBy: "pubdate") { publications, error in
+    if let error = error {
+        print("Error fetching publications: \(error)")
+    } else if let publications = publications {
+        print(publications)
+    }
+}
+```
+
+
 ## Contributing
 
 We welcome contributions to `GoogleScholarFetcher`! If you have suggestions for improvements, please open an issue or a pull request.
 
 ## Similar projects
 
-A python module that do the same: https://github.com/ezefranca/scholarly_publications
+A python module that does the same: https://github.com/ezefranca/scholarly_publications
 
 ## License
 
 `GoogleScholarFetcher` is released under the MIT License. See the LICENSE file for more details.
+
