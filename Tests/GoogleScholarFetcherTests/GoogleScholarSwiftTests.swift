@@ -20,6 +20,38 @@ final class GoogleScholarFetcherTests: XCTestCase {
         waitForExpectations(timeout: 10, handler: nil)
     }
     
+    func test_FetchPublications_pubdate() {
+        let fetcher = GoogleScholarFetcher()
+        let authorID = "RefX_60AAAAJ"
+        let maxPublications = 1
+        let expectation = self.expectation(description: "Fetching publications with limit")
+
+        fetcher.fetchAllPublications(authorID: authorID, maxPublications: maxPublications, sortBy: .pubdate) { publications, error in
+            XCTAssertNil(error, "Error should be nil")
+            XCTAssertEqual(publications?.count, maxPublications, "Number of publications should match the limit")
+            XCTAssertTrue(Int(publications![0].year)! >= 2023)
+            expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 10, handler: nil)
+    }
+    
+    func test_FetchPublications_citation() {
+        let fetcher = GoogleScholarFetcher()
+        let authorID = "RefX_60AAAAJ"
+        let maxPublications = 1
+        let expectation = self.expectation(description: "Fetching publications with limit")
+
+        fetcher.fetchAllPublications(authorID: authorID, maxPublications: maxPublications, sortBy: .cited) { publications, error in
+            XCTAssertNil(error, "Error should be nil")
+            XCTAssertEqual(publications?.count, maxPublications, "Number of publications should match the limit")
+            XCTAssertTrue(Int(publications![0].citations)! > 2400)
+            expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 10, handler: nil)
+    }
+    
     func test_FetchArticleDetails() {
         let fetcher = GoogleScholarFetcher()
         let authorID = "RefX_60AAAAJ"
