@@ -201,12 +201,42 @@ public class GoogleScholarFetcher {
     /// - Throws: An error if parsing fails.
     private func parseArticle(_ doc: Document) throws -> Article {
         let title = try doc.select("#gsc_oci_title").text()
-        let authors = try doc.select(".gsc_oci_field:contains(Autores) + .gsc_oci_value").text()
-        let publicationDate = try doc.select(".gsc_oci_field:contains(Data de publicação) + .gsc_oci_value").text()
-        let publication = try doc.select(".gsc_oci_field:contains(Publicações) + .gsc_oci_value").text()
+        
+        let authors = try selectValue(in: doc, withIndex: 0)
+        let publicationDate = try selectValue(in: doc, withIndex: 1)
+        let publication = try selectValue(in: doc, withIndex: 2, defaultValue: "Unknown")
         let description = try doc.select("#gsc_oci_descr").text()
-        let totalCitations = try doc.select(".gsc_oci_field:contains(Total de citações) + .gsc_oci_value").text()
+        let totalCitations = try selectTotalCitations(in: doc)
         
         return Article(title: title, authors: authors, publicationDate: publicationDate, publication: publication, description: description, totalCitations: totalCitations)
+    }
+
+    private func selectValue(in doc: Document, withIndex index: Int, defaultValue: String = "") throws -> String {
+        let fieldElements = try doc.select(".gs_scl")
+        if index < fieldElements.count {
+            let fieldElement = fieldElements[index]
+            if let fieldValueElement = try fieldElement.select(".gsc_oci_value").first() {
+                return try fieldValueElement.text()
+            }
+        }
+        return defaultValue
+    }
+
+    private func selectTotalCitations(in doc: Document) throws -> String {
+        if let citationElement = try doc.select(".gsc_oci_value a[href*='cites']").first() {
+            let citationText = try citationElement.text()
+            if let citationCount = extractNumber(from: citationText) {
+                return citationCount
+            }
+        }
+        return ""
+    }
+
+    private func extractNumber(from text: String) -> String? {
+        let pattern = "\\d+"
+        if let range = text.range(of: pattern, options: .regularExpression) {
+            return String(text[range])
+        }
+        return nil
     }
 }

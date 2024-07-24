@@ -7,7 +7,7 @@ final class GoogleScholarFetcherTests: XCTestCase {
 
     func test_FetchPublicationsLimit() {
         let fetcher = GoogleScholarFetcher()
-        let authorID = "6nOPl94AAAAJ"
+        let authorID = "RefX_60AAAAJ"
         let maxPublications = 1
         let expectation = self.expectation(description: "Fetching publications with limit")
 
@@ -22,7 +22,7 @@ final class GoogleScholarFetcherTests: XCTestCase {
     
     func test_FetchArticleDetails() {
         let fetcher = GoogleScholarFetcher()
-        let authorID = "6nOPl94AAAAJ"
+        let authorID = "RefX_60AAAAJ"
         let maxPublications = 1
         let fetchPublicationsExpectation = self.expectation(description: "Fetching publications with limit")
         
