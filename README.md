@@ -52,7 +52,7 @@ swift run GoogleScholarSwiftCLI <author_id> --sortby <pubdate/cited>
 You can also use `GoogleScholarFetcher` directly in your Swift code. Here's how:
 
 ```swift
-import GoogleScholarFetcher
+import GoogleScholarSwift
 
 let fetcher = GoogleScholarFetcher()
 
@@ -86,7 +86,7 @@ fetcher.fetchAllPublications(authorID: "<author_id>", sortBy: "<pubdate/cited>")
 
 ## Contributing
 
-We welcome contributions to `GoogleScholarFetcher`! If you have suggestions for improvements, please open an issue or a pull request.
+We welcome contributions to `GoogleScholarSwift`! If you have suggestions for improvements, please open an issue or a pull request.
 
 ## Similar projects
 
