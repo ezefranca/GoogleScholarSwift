@@ -5,14 +5,16 @@ import PackageDescription
 
 let package = Package(
     name: "GoogleScholarSwift",
+    platforms: [
+        .iOS(.v13),
+        .macOS(.v12),
+        .tvOS(.v13),
+        .watchOS(.v6)
+    ],
     products: [
         .library(
             name: "GoogleScholarSwift",
             targets: ["GoogleScholarSwift"]),
-        .executable(
-            name: "GoogleScholarSwiftCLI",
-            targets: ["GoogleScholarSwiftCLI"]
-        )
     ],
     dependencies: [
         .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.7.2"),
@@ -22,12 +24,8 @@ let package = Package(
         .target(
             name: "GoogleScholarSwift",
             dependencies: ["SwiftSoup"]),
-        .executableTarget(
-            name: "GoogleScholarSwiftCLI",
-            dependencies: ["GoogleScholarSwift"]
-        ),
         .testTarget(
             name: "GoogleScholarSwiftTests",
-            dependencies: ["GoogleScholarSwift"]),
+            dependencies: ["GoogleScholarSwift"])
     ]
 )

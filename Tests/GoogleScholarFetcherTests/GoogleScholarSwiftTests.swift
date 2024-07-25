@@ -1,96 +1,102 @@
 import XCTest
 @testable import GoogleScholarSwift
 
-// This is a End to End test, disable it if do not want access internet during tests
+// Take care because this is not unity tests, it's more End to end tests (needs internet)
 
 final class GoogleScholarFetcherTests: XCTestCase {
 
-    func test_FetchPublicationsLimit() {
+    func test_FetchPublicationsLimit() async throws {
         let fetcher = GoogleScholarFetcher()
-        let authorID = "RefX_60AAAAJ"
-        let maxPublications = 1
-        let expectation = self.expectation(description: "Fetching publications with limit")
+        let authorID = GoogleScholarID("RefX_60AAAAJ")
+        let fetchQuantity = FetchQuantity.specific(1)
 
-        fetcher.fetchAllPublications(authorID: authorID, maxPublications: maxPublications) { publications, error in
-            XCTAssertNil(error, "Error should be nil")
-            XCTAssertEqual(publications?.count, maxPublications, "Number of publications should match the limit")
-            expectation.fulfill()
+        do {
+            let publications = try await fetcher.fetchAllPublications(authorID: authorID, fetchQuantity: fetchQuantity)
+            XCTAssertEqual(publications.count, 1, "Number of publications should match the limit")
+        } catch {
+            XCTFail("Error fetching publications: \(error)")
         }
-
-        waitForExpectations(timeout: 10, handler: nil)
     }
     
-    func test_FetchPublications_pubdate() {
+    func test_FetchPublications_pubdate() async throws {
         let fetcher = GoogleScholarFetcher()
-        let authorID = "RefX_60AAAAJ"
-        let maxPublications = 1
-        let expectation = self.expectation(description: "Fetching publications with limit")
+        let authorID = GoogleScholarID("RefX_60AAAAJ")
+        let fetchQuantity = FetchQuantity.specific(1)
 
-        fetcher.fetchAllPublications(authorID: authorID, maxPublications: maxPublications, sortBy: .pubdate) { publications, error in
-            XCTAssertNil(error, "Error should be nil")
-            XCTAssertEqual(publications?.count, maxPublications, "Number of publications should match the limit")
-            XCTAssertTrue(Int(publications![0].year)! >= 2023)
-            expectation.fulfill()
+        do {
+            let publications = try await fetcher.fetchAllPublications(authorID: authorID, fetchQuantity: fetchQuantity, sortBy: .pubdate)
+            XCTAssertEqual(publications.count, 1, "Number of publications should match the limit")
+            XCTAssertTrue(Int(publications[0].year) ?? 0 >= 2023)
+        } catch {
+            XCTFail("Error fetching publications: \(error)")
         }
-
-        waitForExpectations(timeout: 10, handler: nil)
     }
     
-    func test_FetchPublications_citation() {
+    func test_FetchPublications_citation() async throws {
         let fetcher = GoogleScholarFetcher()
-        let authorID = "RefX_60AAAAJ"
-        let maxPublications = 1
-        let expectation = self.expectation(description: "Fetching publications with limit")
+        let authorID = GoogleScholarID("RefX_60AAAAJ")
+        let fetchQuantity = FetchQuantity.specific(1)
 
-        fetcher.fetchAllPublications(authorID: authorID, maxPublications: maxPublications, sortBy: .cited) { publications, error in
-            XCTAssertNil(error, "Error should be nil")
-            XCTAssertEqual(publications?.count, maxPublications, "Number of publications should match the limit")
-            XCTAssertTrue(Int(publications![0].citations)! > 2400)
-            expectation.fulfill()
+        do {
+            let publications = try await fetcher.fetchAllPublications(authorID: authorID, fetchQuantity: fetchQuantity, sortBy: .cited)
+            XCTAssertEqual(publications.count, 1, "Number of publications should match the limit")
+            XCTAssertTrue(Int(publications[0].citations) ?? 0 > 2400)
+        } catch {
+            XCTFail("Error fetching publications: \(error)")
         }
-
-        waitForExpectations(timeout: 10, handler: nil)
     }
     
-    func test_FetchArticleDetails() {
+    func test_FetchArticleDetails() async throws {
         let fetcher = GoogleScholarFetcher()
-        let authorID = "RefX_60AAAAJ"
-        let maxPublications = 1
-        let fetchPublicationsExpectation = self.expectation(description: "Fetching publications with limit")
-        
-        var publicationLink: String?
+        let authorID = GoogleScholarID("RefX_60AAAAJ")
+        let fetchQuantity = FetchQuantity.specific(1)
 
         // Step 1: Fetch publications
-        fetcher.fetchAllPublications(authorID: authorID, maxPublications: maxPublications) { publications, error in
-            XCTAssertNil(error, "Error should be nil")
-            XCTAssertEqual(publications?.count, maxPublications, "Number of publications should match the limit")
-            publicationLink = publications?.first?.link
-            fetchPublicationsExpectation.fulfill()
+        var publicationLink: String?
+
+        do {
+            let publications = try await fetcher.fetchAllPublications(authorID: authorID, fetchQuantity: fetchQuantity)
+            XCTAssertEqual(publications.count, 1, "Number of publications should match the limit")
+            publicationLink = publications.first?.link
+        } catch {
+            XCTFail("Error fetching publications: \(error)")
         }
 
-        waitForExpectations(timeout: 10, handler: nil)
+        guard let link = publicationLink else {
+            XCTFail("Failed to get publication link")
+            return
+        }
 
         // Step 2: Fetch article details
-        if let link = publicationLink {
-            let fetchArticleDetailsExpectation = self.expectation(description: "Fetching article details")
+        let articleLink = ArticleLink(value: link)
 
-            let articleDetails = ArticleDetails(link: link)
-            fetcher.fetchArticleDetails(articleDetails: articleDetails) { article, error in
-                XCTAssertNil(error, "Error should be nil")
-                XCTAssertNotNil(article, "Article should not be nil")
-                XCTAssertNotNil(article?.title)
-                XCTAssertNotNil(article?.authors)
-                XCTAssertNotNil(article?.publicationDate)
-                XCTAssertNotNil(article?.publication)
-                XCTAssertNotNil(article?.description)
-                XCTAssertNotNil(article?.totalCitations)
-                fetchArticleDetailsExpectation.fulfill()
-            }
+        do {
+            let article = try await fetcher.fetchArticle(articleLink: articleLink)
+            XCTAssertNotNil(article, "Article should not be nil")
+            XCTAssertNotNil(article.title)
+            XCTAssertNotNil(article.authors)
+            XCTAssertNotNil(article.publicationDate)
+            XCTAssertNotNil(article.publication)
+            XCTAssertNotNil(article.description)
+            XCTAssertNotNil(article.totalCitations)
+        } catch {
+            XCTFail("Error fetching article details: \(error)")
+        }
+    }
+    
+    func test_FetchScientistDetails() async throws {
+        let fetcher = GoogleScholarFetcher()
+        let scholarID = GoogleScholarID("RefX_60AAAAJ")
 
-            waitForExpectations(timeout: 10, handler: nil)
-        } else {
-            XCTFail("Failed to get publication link")
+        do {
+            let scientist = try await fetcher.fetchScientistDetails(scholarID: scholarID)
+            XCTAssertNotNil(scientist, "Scientist should not be nil")
+            XCTAssertEqual(scientist.id, scholarID)
+            XCTAssertNotNil(scientist.name)
+            XCTAssertNotNil(scientist.affiliation)
+            XCTAssertNotNil(scientist.pictureURL)
+        } catch {
+            XCTFail("Error fetching scientist details: \(error)")
         }
     }
 }
-
