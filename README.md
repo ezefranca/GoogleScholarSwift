@@ -10,7 +10,7 @@ To integrate `GoogleScholarSwift` into your Xcode project using Swift Package Ma
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ezefranca/GoogleScholarSwift.git", from: "1.3.0")
+    .package(url: "https://github.com/ezefranca/GoogleScholarSwift.git", from: "1.2.0")
 ]
 ```
 
