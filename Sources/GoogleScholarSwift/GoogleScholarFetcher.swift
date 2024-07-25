@@ -164,8 +164,8 @@ public class GoogleScholarFetcher {
             guard let titleElement = try row.select(".gsc_a_at").first(),
                   let title = try? titleElement.text(),
                   let link = try? titleElement.attr("href"),
-                  let year = try? row.select(".gsc_a_h").text(),
-                  let citationsText = try? row.select(".gsc_a_ac").text() else {
+                  let year = try? row.select(".gsc_a_y span").text(),
+                  let citationsText = try? row.select(".gsc_a_c a").text() else {
                 continue
             }
             
@@ -218,7 +218,6 @@ public class GoogleScholarFetcher {
         
         return try parseScientistDetails(from: html, id: scholarID)
     }
-    
     
     // MARK: Private Methods
     
@@ -299,19 +298,20 @@ public class GoogleScholarFetcher {
     }
     
     /// Parses the scientist's details from the HTML string.
-       ///
-       /// - Parameters:
-       ///   - html: The HTML string to parse.
-       ///   - id: The Google Scholar author ID.
-       /// - Returns: A `Scientist` object containing the scientist's details.
-       /// - Throws: An error if parsing fails.
-       private func parseScientistDetails(from html: String, id: GoogleScholarID) throws -> Scientist {
-           let doc: Document = try SwiftSoup.parse(html)
-           
-           let name = try doc.select("#gsc_prf_in").text()
-           let affiliation = try doc.select(".gsc_prf_ila").text()
-           let pictureURL = try doc.select("#gsc_prf_pua img").attr("src")
-           
-           return Scientist(id: id, name: name, affiliation: affiliation, pictureURL: pictureURL)
-       }
+    ///
+    /// - Parameters:
+    ///   - html: The HTML string to parse.
+    ///   - id: The Google Scholar author ID.
+    /// - Returns: A `Scientist` object containing the scientist's details.
+    /// - Throws: An error if parsing fails.
+    private func parseScientistDetails(from html: String, id: GoogleScholarID) throws -> Scientist {
+        let doc: Document = try SwiftSoup.parse(html)
+        
+        let name = try doc.select("#gsc_prf_in").text()
+        let affiliation = try doc.select(".gsc_prf_il").first()?.text() ?? ""
+        let pictureURL = try doc.select("#gsc_prf_pua img").attr("src")
+        
+        return Scientist(id: id, name: name, affiliation: affiliation, pictureURL: pictureURL)
+    }
 }
+
