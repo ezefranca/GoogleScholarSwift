@@ -4,6 +4,7 @@ import SwiftSoup
 /// A class responsible for fetching data from Google Scholar.
 public class GoogleScholarFetcher {
     private let session: URLSession
+    private var publicationCache: [GoogleScholarID: [Publication]] = [:]
     
     // MARK: Public Methods
     
@@ -26,7 +27,7 @@ public class GoogleScholarFetcher {
     /// - Example:
     /// ```swift
     /// let fetcher = GoogleScholarFetcher()
-    /// let publications = try await fetcher.fetchAllPublications(authorID: GoogleScholarID("6nOPl94AAAAJ"), fetchQuantity: .specific(10))
+    /// let publications = try await fetcher.fetchAllPublications(authorID: GoogleScholarID("RefX_60AAAAJ"), fetchQuantity: .specific(10))
     /// print(publications)
     /// ```
     public func fetchAllPublications(
@@ -178,19 +179,19 @@ public class GoogleScholarFetcher {
         return publications
     }
     
-    /// Fetches the scientist's details such as name, affiliation, and picture URL from Google Scholar.
+    /// Fetches the author's details such as name, affiliation, and picture URL from Google Scholar.
     ///
     /// - Parameter scholarID: The Google Scholar author ID.
-    /// - Returns: A `Scientist` object containing the scientist's details.
+    /// - Returns: A `Author` object containing the author's details.
     /// - Throws: An error if fetching or parsing fails.
     ///
     /// - Example:
     /// ```swift
     /// let fetcher = GoogleScholarFetcher()
-    /// let scientistDetails = try await fetcher.fetchScientistDetails(scholarID: GoogleScholarID("6nOPl94AAAAJ"))
-    /// print(scientistDetails)
+    /// let authorDetails = try await fetcher.fetchAuthorDetails(scholarID: GoogleScholarID("RefX_60AAAAJ"))
+    /// print(authorDetails)
     /// ```
-    public func fetchScientistDetails(scholarID: GoogleScholarID) async throws -> Scientist {
+    public func fetchAuthorDetails(scholarID: GoogleScholarID) async throws -> Author {
         guard var urlComponents = URLComponents(string: "https://scholar.google.com/citations") else {
             throw NSError(domain: "Invalid URL", code: 0, userInfo: nil)
         }
@@ -216,7 +217,36 @@ public class GoogleScholarFetcher {
             throw NSError(domain: "Invalid Data", code: 0, userInfo: nil)
         }
         
-        return try parseScientistDetails(from: html, id: scholarID)
+        return try parseAuthorDetails(from: html, id: scholarID)
+    }
+    
+    /// Fetches the total number of citations and publications for a given author from Google Scholar.
+    ///
+    /// - Parameters:
+    ///   - authorID: The Google Scholar author ID.
+    ///   - fetchQuantity: The quantity of publications to fetch. Can be `.all` or `.specific(Int)`. Defaults to `.all`.
+    /// - Returns: An `AuthorMetrics` struct containing the total number of citations and total number of publications.
+    /// - Throws: An error if fetching or parsing fails.
+    ///
+    /// - Example:
+    /// ```swift
+    /// let fetcher = GoogleScholarFetcher()
+    /// let metrics = try await fetcher.getAuthorMetrics(authorID: GoogleScholarID("RefX_60AAAAJ"))
+    /// print("Total Citations: \(metrics.citations), Total Publications: \(metrics.publications)")
+    /// ```
+    public func getAuthorMetrics(
+        authorID: GoogleScholarID,
+        fetchQuantity: FetchQuantity = .all
+    ) async throws -> AuthorMetrics {
+        let publications = try await fetchAllPublications(authorID: authorID, fetchQuantity: fetchQuantity)
+        
+        let totalCitations = publications.reduce(into: 0) { (sum, publication) in
+            sum += Int(publication.citations.onlyNumbers) ?? 0
+        }
+        
+        let totalPublications = publications.count
+        
+        return AuthorMetrics(citations: totalCitations, publications: totalPublications)
     }
     
     // MARK: Private Methods
@@ -297,21 +327,27 @@ public class GoogleScholarFetcher {
         return ""
     }
     
-    /// Parses the scientist's details from the HTML string.
+    /// Parses the author's details from the HTML string.
     ///
     /// - Parameters:
     ///   - html: The HTML string to parse.
     ///   - id: The Google Scholar author ID.
-    /// - Returns: A `Scientist` object containing the scientist's details.
+    /// - Returns: A `Author` object containing the author's details.
     /// - Throws: An error if parsing fails.
-    private func parseScientistDetails(from html: String, id: GoogleScholarID) throws -> Scientist {
+    private func parseAuthorDetails(from html: String, id: GoogleScholarID) throws -> Author {
         let doc: Document = try SwiftSoup.parse(html)
         
         let name = try doc.select("#gsc_prf_in").text()
         let affiliation = try doc.select(".gsc_prf_il").first()?.text() ?? ""
         let pictureURL = try doc.select("#gsc_prf_pua img").attr("src")
         
-        return Scientist(id: id, name: name, affiliation: affiliation, pictureURL: pictureURL)
+        return Author(id: id, name: name, affiliation: affiliation, pictureURL: pictureURL)
     }
 }
 
+extension String {
+    /// A computed property that returns only the numeric characters in the string.
+    var onlyNumbers: String {
+        return self.filter { $0.isNumber }
+    }
+}

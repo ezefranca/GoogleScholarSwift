@@ -101,12 +101,12 @@ let article = try await fetcher.fetchArticle(articleLink: articleLink)
 print(article)
 ```
 
-### `fetchScientistDetails`
+### `fetchAuthorDetails`
 
-Fetches the scientist's details such as name, affiliation, and picture URL from Google Scholar.
+Fetches the Author's details such as name, affiliation, and picture URL from Google Scholar.
 
 ```swift
-public func fetchScientistDetails(scholarID: GoogleScholarID) async throws -> Scientist
+public func fetchAuthorDetails(scholarID: GoogleScholarID) async throws -> Author
 ```
 
 #### Parameters
@@ -115,7 +115,7 @@ public func fetchScientistDetails(scholarID: GoogleScholarID) async throws -> Sc
 
 #### Returns
 
-- A `Scientist` object containing the scientist's details.
+- A `Author` object containing the Author's details.
 
 #### Throws
 
@@ -126,8 +126,8 @@ public func fetchScientistDetails(scholarID: GoogleScholarID) async throws -> Sc
 ```swift
 let fetcher = GoogleScholarFetcher()
 
-let scientistDetails = try await fetcher.fetchScientistDetails(scholarID: GoogleScholarID("6nOPl94AAAAJ"))
-print(scientistDetails)
+let AuthorDetails = try await fetcher.fetchAuthorDetails(scholarID: GoogleScholarID("6nOPl94AAAAJ"))
+print(AuthorDetails)
 ```
 
 ### Complete Example
@@ -157,9 +157,9 @@ if let firstPublication = publications.first {
     print("Article Details:", article)
 }
 
-// Fetch scientist details
-let scientistDetails = try await fetcher.fetchScientistDetails(scholarID: authorID)
-print("Scientist Details:", scientistDetails)
+// Fetch Author details
+let AuthorDetails = try await fetcher.fetchAuthorDetails(scholarID: authorID)
+print("Author Details:", AuthorDetails)
 ```
 
 ## Contributing
