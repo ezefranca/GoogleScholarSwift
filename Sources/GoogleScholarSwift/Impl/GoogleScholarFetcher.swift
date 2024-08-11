@@ -65,12 +65,12 @@ public class GoogleScholarFetcher {
             }
             
             var request = URLRequest(url: url)
+            request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
+            request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
             for (header, value) in Constants.headers {
                 request.addValue(value, forHTTPHeaderField: header)
             }
-            for (cookie, value) in Constants.cookies {
-                request.addValue("\(cookie)=\(value)", forHTTPHeaderField: "Cookie")
-            }
+            applyCookies(to: &request)
             
             let (data, _) = try await session.data(for: request)
             
@@ -134,12 +134,12 @@ public class GoogleScholarFetcher {
         }
         
         var request = URLRequest(url: url)
+        request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
+        request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
         for (header, value) in Constants.headers {
             request.addValue(value, forHTTPHeaderField: header)
         }
-        for (cookie, value) in Constants.cookies {
-            request.addValue("\(cookie)=\(value)", forHTTPHeaderField: "Cookie")
-        }
+        applyCookies(to: &request)
         
         let (data, _) = try await session.data(for: request)
         
@@ -204,12 +204,12 @@ public class GoogleScholarFetcher {
         }
         
         var request = URLRequest(url: url)
+        request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
+        request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
         for (header, value) in Constants.headers {
             request.addValue(value, forHTTPHeaderField: header)
         }
-        for (cookie, value) in Constants.cookies {
-            request.addValue("\(cookie)=\(value)", forHTTPHeaderField: "Cookie")
-        }
+        applyCookies(to: &request)
         
         let (data, _) = try await session.data(for: request)
         
@@ -342,6 +342,23 @@ public class GoogleScholarFetcher {
         let pictureURL = try doc.select("#gsc_prf_pua img").attr("src")
         
         return Author(id: id, name: name, affiliation: affiliation, pictureURL: pictureURL)
+    }
+    
+    // Helper function to update cookies dynamically
+    private func updateCookies(from response: HTTPURLResponse) {
+        if let headerFields = response.allHeaderFields as? [String: String],
+           let url = response.url {
+            let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
+            for cookie in cookies {
+                Constants.cookies[cookie.name] = cookie.value
+            }
+        }
+    }
+    
+    // Helper function to apply cookies to the request
+    private func applyCookies(to request: inout URLRequest) {
+        let cookieString = Constants.cookies.map { "\($0.key)=\($0.value)" }.joined(separator: "; ")
+        request.addValue(cookieString, forHTTPHeaderField: "Cookie")
     }
 }
 
