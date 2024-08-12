@@ -1,7 +1,8 @@
 import Foundation
 
-/// Model for article details.
-public struct Article: Codable, Hashable, Identifiable, Equatable, CustomStringConvertible {
+/// Class for article details.
+public class Article: Codable, Hashable, Identifiable, Equatable, CustomStringConvertible {
+
     /// The unique identifier for the article.
     public let id: String
     /// The title of the article.
@@ -40,4 +41,10 @@ public struct Article: Codable, Hashable, Identifiable, Equatable, CustomStringC
     public var localizedDescription: String {
         return "Article(id: \(id), title: \(title), authors: \(authors), publicationDate: \(publicationDate), publication: \(publication), description: \(description), totalCitations: \(totalCitations))"
     }
+    
+    public static func == (lhs: Article, rhs: Article) -> Bool {
+        return lhs.description == rhs.description
+    }
+    
+    public func hash(into hasher: inout Hasher) {}
 }

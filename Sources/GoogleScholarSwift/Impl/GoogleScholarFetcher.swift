@@ -4,17 +4,34 @@ import SwiftSoup
 /// A class responsible for fetching data from Google Scholar.
 public class GoogleScholarFetcher {
     private let session: URLSession
-    private var publicationCache: [GoogleScholarID: [Publication]] = [:]
-    
-    // MARK: Public Methods
-    
-    /// Initializes a new instance of `GoogleScholarFetcher` with a custom URL session.
+    private let publicationCache = NSCache<NSString, NSArray>()
+    private let articleCache = NSCache<NSString, Article>()
+
+    // MARK: - Initializer
+
+    /// Initializes a new instance of `GoogleScholarFetcher` with a custom URL session and cache configuration.
     ///
-    /// - Parameter session: A custom URL session. Defaults to `.shared`.
-    public init(session: URLSession = .shared) {
+    /// - Parameters:
+    ///   - session: A custom URL session. Defaults to `.shared`.
+    ///   - cacheConfig: The configuration for the cache. Defaults to `.default`.
+    public init(session: URLSession = .shared, cacheConfig: GoogleScholarCacheConfig = .default) {
         self.session = session
+        self.configureCache(with: cacheConfig)
     }
-    
+
+    /// Configures the NSCache with the provided configuration.
+    ///
+    /// - Parameter cacheConfig: The configuration for the cache.
+    private func configureCache(with cacheConfig: GoogleScholarCacheConfig) {
+        publicationCache.countLimit = cacheConfig.publicationCountLimit
+        publicationCache.totalCostLimit = cacheConfig.publicationTotalCostLimit
+
+        articleCache.countLimit = cacheConfig.articleCountLimit
+        articleCache.totalCostLimit = cacheConfig.articleTotalCostLimit
+    }
+
+    // MARK: - Public Methods
+
     /// Fetches all publications for a given author from Google Scholar.
     ///
     /// - Parameters:
@@ -35,6 +52,12 @@ public class GoogleScholarFetcher {
         fetchQuantity: FetchQuantity = .all,
         sortBy: SortBy = .cited
     ) async throws -> [Publication] {
+        
+        let cacheKey = "\(authorID.value)-\(fetchQuantity)-\(sortBy.rawValue)" as NSString
+        if let cachedPublications = publicationCache.object(forKey: cacheKey) as? [Publication] {
+            return cachedPublications
+        }
+        
         var allPublications: [Publication] = []
         var startIndex = 0
         let pageSize = 100
@@ -64,14 +87,7 @@ public class GoogleScholarFetcher {
                 throw NSError(domain: "Invalid URL Components", code: 0, userInfo: nil)
             }
             
-            var request = URLRequest(url: url)
-            request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
-            request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
-            for (header, value) in Constants.headers {
-                request.addValue(value, forHTTPHeaderField: header)
-            }
-            applyCookies(to: &request)
-            
+            let request = configureRequest(with: url)
             let (data, _) = try await session.data(for: request)
             
             guard let html = String(data: data, encoding: .utf8) else {
@@ -111,9 +127,10 @@ public class GoogleScholarFetcher {
             }
         }
         
+        publicationCache.setObject(mutablePublications as NSArray, forKey: cacheKey)
         return mutablePublications
     }
-    
+
     /// Fetches the detailed information for a specific article.
     ///
     /// - Parameters:
@@ -129,18 +146,16 @@ public class GoogleScholarFetcher {
     /// print(article)
     /// ```
     public func fetchArticle(articleLink: ArticleLink) async throws -> Article {
+        let cacheKey = articleLink.value as NSString
+        if let cachedArticle = articleCache.object(forKey: cacheKey) {
+            return cachedArticle
+        }
+        
         guard let url = URL(string: articleLink.value) else {
             throw NSError(domain: "Invalid URL", code: 0, userInfo: nil)
         }
         
-        var request = URLRequest(url: url)
-        request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
-        request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
-        for (header, value) in Constants.headers {
-            request.addValue(value, forHTTPHeaderField: header)
-        }
-        applyCookies(to: &request)
-        
+        let request = configureRequest(with: url)
         let (data, _) = try await session.data(for: request)
         
         guard let html = String(data: data, encoding: .utf8) else {
@@ -149,36 +164,11 @@ public class GoogleScholarFetcher {
         
         let doc: Document = try SwiftSoup.parse(html)
         let article = try self.parseArticle(doc)
+        
+        articleCache.setObject(article, forKey: cacheKey)
         return article
     }
-    
-    /// Parses the publication data from the HTML document.
-    ///
-    /// - Parameter doc: The HTML document to parse.
-    /// - Returns: An array of `Publication` objects.
-    /// - Throws: An error if parsing fails.
-    private func parsePublications(_ doc: Document, authorID: GoogleScholarID) throws -> [Publication] {
-        var publications: [Publication] = []
-        let rows = try doc.select(".gsc_a_tr")
-        
-        for row in rows {
-            guard let titleElement = try row.select(".gsc_a_at").first(),
-                  let title = try? titleElement.text(),
-                  let link = try? titleElement.attr("href"),
-                  let year = try? row.select(".gsc_a_y span").text(),
-                  let citationsText = try? row.select(".gsc_a_c a").text() else {
-                continue
-            }
-            
-            let id = extractPublicationID(from: link)
-            let citations = citationsText.isEmpty ? "0" : citationsText
-            let publication = Publication(id: id, authorId: authorID, title: title, year: year, link: "https://scholar.google.com" + link, citations: citations)
-            publications.append(publication)
-        }
-        
-        return publications
-    }
-    
+
     /// Fetches the author's details such as name, affiliation, and picture URL from Google Scholar.
     ///
     /// - Parameter scholarID: The Google Scholar author ID.
@@ -203,14 +193,7 @@ public class GoogleScholarFetcher {
             throw NSError(domain: "Invalid URL Components", code: 0, userInfo: nil)
         }
         
-        var request = URLRequest(url: url)
-        request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
-        request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
-        for (header, value) in Constants.headers {
-            request.addValue(value, forHTTPHeaderField: header)
-        }
-        applyCookies(to: &request)
-        
+        let request = configureRequest(with: url)
         let (data, _) = try await session.data(for: request)
         
         guard let html = String(data: data, encoding: .utf8) else {
@@ -219,7 +202,7 @@ public class GoogleScholarFetcher {
         
         return try parseAuthorDetails(from: html, id: scholarID)
     }
-    
+
     /// Fetches the total number of citations and publications for a given author from Google Scholar.
     ///
     /// - Parameters:
@@ -248,9 +231,51 @@ public class GoogleScholarFetcher {
         
         return AuthorMetrics(citations: totalCitations, publications: totalPublications)
     }
-    
-    // MARK: Private Methods
-    
+
+    // MARK: - Private Methods
+
+    /// Configures a `URLRequest` with common headers and cookies.
+    ///
+    /// - Parameter url: The `URL` for the request.
+    /// - Returns: A configured `URLRequest`.
+    private func configureRequest(with url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
+        request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
+        for (header, value) in Constants.headers {
+            request.addValue(value, forHTTPHeaderField: header)
+        }
+        applyCookies(to: &request)
+        return request
+    }
+
+    /// Parses the publication data from the HTML document.
+    ///
+    /// - Parameter doc: The HTML document to parse.
+    /// - Returns: An array of `Publication` objects.
+    /// - Throws: An error if parsing fails.
+    private func parsePublications(_ doc: Document, authorID: GoogleScholarID) throws -> [Publication] {
+        var publications: [Publication] = []
+        let rows = try doc.select(".gsc_a_tr")
+        
+        for row in rows {
+            guard let titleElement = try row.select(".gsc_a_at").first(),
+                  let title = try? titleElement.text(),
+                  let link = try? titleElement.attr("href"),
+                  let year = try? row.select(".gsc_a_y span").text(),
+                  let citationsText = try? row.select(".gsc_a_c a").text() else {
+                continue
+            }
+            
+            let id = extractPublicationID(from: link)
+            let citations = citationsText.isEmpty ? "0" : citationsText
+            let publication = Publication(id: id, authorId: authorID, title: title, year: year, link: "https://scholar.google.com" + link, citations: citations)
+            publications.append(publication)
+        }
+        
+        return publications
+    }
+
     /// Parses the article details from the HTML document.
     ///
     /// - Parameter doc: The HTML document to parse.
@@ -267,7 +292,24 @@ public class GoogleScholarFetcher {
         
         return Article(title: title, authors: authors, publicationDate: publicationDate, publication: publication, description: description, totalCitations: totalCitations)
     }
-    
+
+    /// Parses the author's details from the HTML string.
+    ///
+    /// - Parameters:
+    ///   - html: The HTML string to parse.
+    ///   - id: The Google Scholar author ID.
+    /// - Returns: A `Author` object containing the author's details.
+    /// - Throws: An error if parsing fails.
+    private func parseAuthorDetails(from html: String, id: GoogleScholarID) throws -> Author {
+        let doc: Document = try SwiftSoup.parse(html)
+        
+        let name = try doc.select("#gsc_prf_in").text()
+        let affiliation = try doc.select(".gsc_prf_il").first()?.text() ?? ""
+        let pictureURL = try doc.select("#gsc_prf_pua img").attr("src")
+        
+        return Author(id: id, name: name, affiliation: affiliation, pictureURL: pictureURL)
+    }
+
     /// Selects the value from the specified index in the document.
     ///
     /// - Parameters:
@@ -286,7 +328,7 @@ public class GoogleScholarFetcher {
         }
         return defaultValue
     }
-    
+
     /// Selects the total number of citations from the document.
     ///
     /// - Parameter doc: The HTML document.
@@ -301,7 +343,7 @@ public class GoogleScholarFetcher {
         }
         return ""
     }
-    
+
     /// Extracts a number from a string.
     ///
     /// - Parameter text: The string containing the number.
@@ -313,7 +355,7 @@ public class GoogleScholarFetcher {
         }
         return nil
     }
-    
+
     /// Extracts the publication ID from the link.
     ///
     /// - Parameter link: The link containing the publication ID.
@@ -326,25 +368,10 @@ public class GoogleScholarFetcher {
         }
         return ""
     }
-    
-    /// Parses the author's details from the HTML string.
+
+    /// Helper function to update cookies dynamically.
     ///
-    /// - Parameters:
-    ///   - html: The HTML string to parse.
-    ///   - id: The Google Scholar author ID.
-    /// - Returns: A `Author` object containing the author's details.
-    /// - Throws: An error if parsing fails.
-    private func parseAuthorDetails(from html: String, id: GoogleScholarID) throws -> Author {
-        let doc: Document = try SwiftSoup.parse(html)
-        
-        let name = try doc.select("#gsc_prf_in").text()
-        let affiliation = try doc.select(".gsc_prf_il").first()?.text() ?? ""
-        let pictureURL = try doc.select("#gsc_prf_pua img").attr("src")
-        
-        return Author(id: id, name: name, affiliation: affiliation, pictureURL: pictureURL)
-    }
-    
-    // Helper function to update cookies dynamically
+    /// - Parameter response: The `HTTPURLResponse` from which to extract cookies.
     private func updateCookies(from response: HTTPURLResponse) {
         if let headerFields = response.allHeaderFields as? [String: String],
            let url = response.url {
@@ -354,8 +381,10 @@ public class GoogleScholarFetcher {
             }
         }
     }
-    
-    // Helper function to apply cookies to the request
+
+    /// Helper function to apply cookies to the request.
+    ///
+    /// - Parameter request: The `URLRequest` to which cookies will be added.
     private func applyCookies(to request: inout URLRequest) {
         let cookieString = Constants.cookies.map { "\($0.key)=\($0.value)" }.joined(separator: "; ")
         request.addValue(cookieString, forHTTPHeaderField: "Cookie")

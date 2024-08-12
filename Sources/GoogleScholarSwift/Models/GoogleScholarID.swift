@@ -1,6 +1,6 @@
 import Foundation
 
-/// Type representing a Google Scholar ID.
+/// Model type representing a Google Scholar ID.
 public struct GoogleScholarID: Codable, Hashable, Equatable, CustomStringConvertible {
     public let value: String
     

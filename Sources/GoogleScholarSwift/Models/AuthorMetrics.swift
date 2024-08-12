@@ -1,6 +1,6 @@
 import Foundation
 
-/// A struct representing the total citations and publications for a given author.
+/// Model for the total citations and publications for a given author.
 public struct AuthorMetrics: Codable, Hashable, Equatable, CustomStringConvertible {
 
     /// The total number of citations across all fetched publications.
