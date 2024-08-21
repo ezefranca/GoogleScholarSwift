@@ -10,9 +10,9 @@ public struct GoogleScholarCacheConfig {
 
     /// Default cache configuration.
     public static let `default` = GoogleScholarCacheConfig(
-        publicationCountLimit: 100,
+        publicationCountLimit: 10000,
         publicationTotalCostLimit: 1024 * 1024 * 10,
-        articleCountLimit: 100,
+        articleCountLimit: 10000,
         articleTotalCostLimit: 1024 * 1024 * 5
     )
 

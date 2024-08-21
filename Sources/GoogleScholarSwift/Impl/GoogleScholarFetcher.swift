@@ -1,8 +1,9 @@
 import Foundation
 import SwiftSoup
 
-/// A class responsible for fetching data from Google Scholar.
+/// A class responsible for fetching data from Google Scholar, with built-in caching.
 public class GoogleScholarFetcher {
+    
     private let session: URLSession
     private let publicationCache = NSCache<NSString, NSArray>()
     private let articleCache = NSCache<NSString, Article>()
@@ -19,13 +20,13 @@ public class GoogleScholarFetcher {
         self.configureCache(with: cacheConfig)
     }
 
-    /// Configures the NSCache with the provided configuration.
+    /// Configures the `NSCache` with the provided configuration.
     ///
     /// - Parameter cacheConfig: The configuration for the cache.
     private func configureCache(with cacheConfig: GoogleScholarCacheConfig) {
         publicationCache.countLimit = cacheConfig.publicationCountLimit
         publicationCache.totalCostLimit = cacheConfig.publicationTotalCostLimit
-
+        
         articleCache.countLimit = cacheConfig.articleCountLimit
         articleCache.totalCostLimit = cacheConfig.articleTotalCostLimit
     }
@@ -54,10 +55,13 @@ public class GoogleScholarFetcher {
     ) async throws -> [Publication] {
         
         let cacheKey = "\(authorID.value)-\(fetchQuantity)-\(sortBy.rawValue)" as NSString
+        
+        // Check if the publications are cached
         if let cachedPublications = publicationCache.object(forKey: cacheKey) as? [Publication] {
             return cachedPublications
         }
         
+        // Fetch publications from the web
         var allPublications: [Publication] = []
         var startIndex = 0
         let pageSize = 100
@@ -71,6 +75,7 @@ public class GoogleScholarFetcher {
             }
         }()
         
+        // Continue fetching publications until the requested quantity is reached or no more pages are available
         while maxPublications == nil || totalFetched < maxPublications! {
             guard var urlComponents = URLComponents(string: "https://scholar.google.com/citations") else {
                 throw NSError(domain: "Invalid URL", code: 0, userInfo: nil)
@@ -97,6 +102,7 @@ public class GoogleScholarFetcher {
             let doc: Document = try SwiftSoup.parse(html)
             let publications = try self.parsePublications(doc, authorID: authorID)
             
+            // Append fetched publications
             if let maxPublications = maxPublications {
                 let remaining = maxPublications - totalFetched
                 let slicedPublications = Array(publications.prefix(remaining))
@@ -107,6 +113,7 @@ public class GoogleScholarFetcher {
                 totalFetched += publications.count
             }
             
+            // Stop if no more publications are available
             if publications.count < pageSize {
                 break
             } else {
@@ -114,8 +121,8 @@ public class GoogleScholarFetcher {
             }
         }
         
+        // Sort the publications based on the provided criteria
         var mutablePublications = allPublications
-        
         switch sortBy {
         case .cited:
             mutablePublications.sort { (pub1, pub2) -> Bool in
@@ -127,7 +134,9 @@ public class GoogleScholarFetcher {
             }
         }
         
+        // Store the publications in cache
         publicationCache.setObject(mutablePublications as NSArray, forKey: cacheKey)
+        
         return mutablePublications
     }
 
@@ -137,16 +146,10 @@ public class GoogleScholarFetcher {
     ///   - articleLink: An `ArticleLink` object containing the link to the article.
     /// - Returns: An `Article` object.
     /// - Throws: An error if fetching or parsing fails.
-    ///
-    /// - Example:
-    /// ```swift
-    /// let fetcher = GoogleScholarFetcher()
-    /// let articleLink = ArticleLink(link: "https://scholar.google.com/citations?view_op=view_citation&hl=en&user=6nOPl94AAAAJ&citation_for_view=6nOPl94AAAAJ:UebtZRa9Y70C")
-    /// let article = try await fetcher.fetchArticle(articleLink: articleLink)
-    /// print(article)
-    /// ```
     public func fetchArticle(articleLink: ArticleLink) async throws -> Article {
         let cacheKey = articleLink.value as NSString
+        
+        // Check if the article is cached
         if let cachedArticle = articleCache.object(forKey: cacheKey) {
             return cachedArticle
         }
@@ -165,22 +168,17 @@ public class GoogleScholarFetcher {
         let doc: Document = try SwiftSoup.parse(html)
         let article = try self.parseArticle(doc)
         
+        // Store the article in cache
         articleCache.setObject(article, forKey: cacheKey)
+        
         return article
     }
 
     /// Fetches the author's details such as name, affiliation, and picture URL from Google Scholar.
     ///
     /// - Parameter scholarID: The Google Scholar author ID.
-    /// - Returns: A `Author` object containing the author's details.
+    /// - Returns: An `Author` object containing the author's details.
     /// - Throws: An error if fetching or parsing fails.
-    ///
-    /// - Example:
-    /// ```swift
-    /// let fetcher = GoogleScholarFetcher()
-    /// let authorDetails = try await fetcher.fetchAuthorDetails(scholarID: GoogleScholarID("RefX_60AAAAJ"))
-    /// print(authorDetails)
-    /// ```
     public func fetchAuthorDetails(scholarID: GoogleScholarID) async throws -> Author {
         guard var urlComponents = URLComponents(string: "https://scholar.google.com/citations") else {
             throw NSError(domain: "Invalid URL", code: 0, userInfo: nil)
@@ -203,6 +201,23 @@ public class GoogleScholarFetcher {
         return try parseAuthorDetails(from: html, id: scholarID)
     }
 
+    // MARK: - Private Methods
+
+    /// Configures a `URLRequest` with common headers and cookies.
+    ///
+    /// - Parameter url: The `URL` for the request.
+    /// - Returns: A configured `URLRequest`.
+    private func configureRequest(with url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
+        request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
+        for (header, value) in Constants.headers {
+            request.addValue(value, forHTTPHeaderField: header)
+        }
+        applyCookies(to: &request)
+        return request
+    }
+    
     /// Fetches the total number of citations and publications for a given author from Google Scholar.
     ///
     /// - Parameters:
@@ -221,32 +236,31 @@ public class GoogleScholarFetcher {
         authorID: GoogleScholarID,
         fetchQuantity: FetchQuantity = .all
     ) async throws -> AuthorMetrics {
+        
+        let cacheKey = "\(authorID.value)-metrics" as NSString
+        
+        // Check if the metrics are cached
+        if let cachedMetrics = articleCache.object(forKey: cacheKey) as? AuthorMetrics {
+            return cachedMetrics
+        }
+        
+        // Fetch all publications
         let publications = try await fetchAllPublications(authorID: authorID, fetchQuantity: fetchQuantity)
         
-        let totalCitations = publications.reduce(into: 0) { (sum, publication) in
-            sum += Int(publication.citations.onlyNumbers) ?? 0
+        // Calculate total citations and publications
+        let totalCitations = publications.reduce(0) { sum, publication in
+            return sum + (Int(publication.citations.onlyNumbers) ?? 0)
         }
         
         let totalPublications = publications.count
         
-        return AuthorMetrics(citations: totalCitations, publications: totalPublications)
-    }
-
-    // MARK: - Private Methods
-
-    /// Configures a `URLRequest` with common headers and cookies.
-    ///
-    /// - Parameter url: The `URL` for the request.
-    /// - Returns: A configured `URLRequest`.
-    private func configureRequest(with url: URL) -> URLRequest {
-        var request = URLRequest(url: url)
-        request.addValue(Constants.randomUserAgent(), forHTTPHeaderField: "User-Agent")
-        request.addValue("https://scholar.google.com/", forHTTPHeaderField: "Referer")
-        for (header, value) in Constants.headers {
-            request.addValue(value, forHTTPHeaderField: header)
-        }
-        applyCookies(to: &request)
-        return request
+        // Create an AuthorMetrics object
+        let metrics = AuthorMetrics(citations: totalCitations, publications: totalPublications)
+        
+        // Store the metrics in cache
+        //articleCache.setObject(metrics as NSObject, forKey: cacheKey)
+        
+        return metrics
     }
 
     /// Parses the publication data from the HTML document.
@@ -298,7 +312,7 @@ public class GoogleScholarFetcher {
     /// - Parameters:
     ///   - html: The HTML string to parse.
     ///   - id: The Google Scholar author ID.
-    /// - Returns: A `Author` object containing the author's details.
+    /// - Returns: An `Author` object containing the author's details.
     /// - Throws: An error if parsing fails.
     private func parseAuthorDetails(from html: String, id: GoogleScholarID) throws -> Author {
         let doc: Document = try SwiftSoup.parse(html)
