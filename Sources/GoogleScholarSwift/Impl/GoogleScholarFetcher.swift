@@ -7,6 +7,12 @@ public class GoogleScholarFetcher {
     private let session: URLSession
     private let publicationCache = NSCache<NSString, NSArray>()
     private let articleCache = NSCache<NSString, Article>()
+    
+    // MARK: - Shared Instance
+    public static var shared: GoogleScholarFetcher = {
+        let instance = GoogleScholarFetcher()
+        return instance
+    }()
 
     // MARK: - Initializer
 
