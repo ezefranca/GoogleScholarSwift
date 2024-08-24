@@ -5,6 +5,7 @@ import XCTest
 
 final class GoogleScholarFetcherTests: XCTestCase {
 
+    /// Test fetching publications with a limit of 1.
     func test_FetchPublicationsLimit() async throws {
         let fetcher = GoogleScholarFetcher()
         let authorID = GoogleScholarID("RefX_60AAAAJ")
@@ -18,6 +19,7 @@ final class GoogleScholarFetcherTests: XCTestCase {
         }
     }
     
+    /// Test fetching publications sorted by publication date with a limit of 1.
     func test_FetchPublications_pubdate() async throws {
         let fetcher = GoogleScholarFetcher()
         let authorID = GoogleScholarID("RefX_60AAAAJ")
@@ -32,6 +34,7 @@ final class GoogleScholarFetcherTests: XCTestCase {
         }
     }
     
+    /// Test fetching publications sorted by number of citations with a limit of 1.
     func test_FetchPublications_citation() async throws {
         let fetcher = GoogleScholarFetcher()
         let authorID = GoogleScholarID("RefX_60AAAAJ")
@@ -46,6 +49,7 @@ final class GoogleScholarFetcherTests: XCTestCase {
         }
     }
     
+    /// Test fetching article details.
     func test_FetchArticleDetails() async throws {
         let fetcher = GoogleScholarFetcher()
         let authorID = GoogleScholarID("RefX_60AAAAJ")
@@ -84,12 +88,13 @@ final class GoogleScholarFetcherTests: XCTestCase {
         }
     }
     
+    /// Test fetching author details.
     func test_FetchAuthorDetails() async throws {
         let fetcher = GoogleScholarFetcher()
         let scholarID = GoogleScholarID("RefX_60AAAAJ")
 
         do {
-            let author = try await fetcher.fetchAuthorDetails(scholarID: scholarID)
+            let author = try await fetcher.fetchAuthorDetails(authorID: scholarID)
             XCTAssertNotNil(author, "Author should not be nil")
             XCTAssertEqual(author.id, scholarID)
             XCTAssertNotNil(author.name, "Author name should not be nil")
@@ -100,16 +105,31 @@ final class GoogleScholarFetcherTests: XCTestCase {
         }
     }
     
+    /// Test fetching author metrics.
     func test_AuthorMetrics() async throws {
         let fetcher = GoogleScholarFetcher()
         let authorID = GoogleScholarID("RefX_60AAAAJ")
-        let fetchQuantity = FetchQuantity.specific(10)
 
         do {
-            let metrics = try await fetcher.getAuthorMetrics(authorID: authorID, fetchQuantity: fetchQuantity)
+            let metrics = try await fetcher.getAuthorMetrics(authorID: authorID)
             
-            XCTAssertEqual(metrics.publications, 10, "Total publications should match the requested quantity")
-            XCTAssertTrue(metrics.citations > 0, "Total citations should be greater than 0")
+            XCTAssertTrue(metrics.publications >= 100)
+            XCTAssertTrue(metrics.citations > 1, "Total citations should be greater than 0")
+        } catch {
+            XCTFail("Error fetching author metrics: \(error)")
+        }
+    }
+    
+    /// Test fetching coauthors.
+    func test_Coauthors() async throws {
+        let fetcher = GoogleScholarFetcher()
+        let authorID = GoogleScholarID("QMC36mkAAAAJ")
+
+        do {
+            let coauthors = try await fetcher.fetchCoAuthors(authorID: authorID)
+            
+            XCTAssertTrue(coauthors.count > 0)
+            print(coauthors)
         } catch {
             XCTFail("Error fetching author metrics: \(error)")
         }

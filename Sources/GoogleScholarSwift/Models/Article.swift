@@ -38,13 +38,25 @@ public class Article: Codable, Hashable, Identifiable, Equatable, CustomStringCo
         self.totalCitations = totalCitations
     }
     
+    /// A localized description of the article.
     public var localizedDescription: String {
         return "Article(id: \(id), title: \(title), authors: \(authors), publicationDate: \(publicationDate), publication: \(publication), description: \(description), totalCitations: \(totalCitations))"
     }
     
+    /// Compares two articles for equality.
+    ///
+    /// - Parameters:
+    ///   - lhs: The left-hand side article.
+    ///   - rhs: The right-hand side article.
+    /// - Returns: `true` if the articles are equal, `false` otherwise.
     public static func == (lhs: Article, rhs: Article) -> Bool {
         return lhs.description == rhs.description
     }
     
-    public func hash(into hasher: inout Hasher) {}
+    /// Hashes the essential components of the article by feeding them into the given hasher.
+    ///
+    /// - Parameter hasher: The hasher to use when combining the components.
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id.hashValue)
+    }
 }

@@ -7,13 +7,17 @@ public struct GoogleScholarCacheConfig {
     public let publicationTotalCostLimit: Int
     public let articleCountLimit: Int
     public let articleTotalCostLimit: Int
+    public let htmlCountLimit: Int
+    public let htmlTotalCostLimit: Int
 
     /// Default cache configuration.
     public static let `default` = GoogleScholarCacheConfig(
         publicationCountLimit: 10000,
         publicationTotalCostLimit: 1024 * 1024 * 10,
         articleCountLimit: 10000,
-        articleTotalCostLimit: 1024 * 1024 * 5
+        articleTotalCostLimit: 1024 * 1024 * 5,
+        htmlCountLimit: 100000,
+        htmlTotalCostLimit: 1024 * 1024 * 10
     )
 
     /// Initializes a new cache configuration.
@@ -27,11 +31,15 @@ public struct GoogleScholarCacheConfig {
         publicationCountLimit: Int,
         publicationTotalCostLimit: Int,
         articleCountLimit: Int,
-        articleTotalCostLimit: Int
+        articleTotalCostLimit: Int,
+        htmlCountLimit: Int,
+        htmlTotalCostLimit: Int
     ) {
         self.publicationCountLimit = publicationCountLimit
         self.publicationTotalCostLimit = publicationTotalCostLimit
         self.articleCountLimit = articleCountLimit
         self.articleTotalCostLimit = articleTotalCostLimit
+        self.htmlCountLimit = htmlCountLimit
+        self.htmlTotalCostLimit = htmlTotalCostLimit
     }
 }

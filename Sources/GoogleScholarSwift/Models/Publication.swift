@@ -33,6 +33,7 @@ public struct Publication: Codable, Hashable, Identifiable, Equatable, CustomStr
         self.citations = citations
     }
     
+    /// A textual representation of the publication.
     public var description: String {
         return "Publication(id: \(id), authorId: \(authorId), title: \(title), year: \(year), link: \(link), citations: \(citations))"
     }
